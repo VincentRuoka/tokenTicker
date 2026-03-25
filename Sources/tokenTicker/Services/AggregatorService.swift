@@ -92,6 +92,9 @@ final class AggregatorService {
                 HistoryStore.shared.persist(provider: providerID, cost: snapshot.costToday)
             }
         }
+        // Fire threshold notifications if any limits have been crossed
+        let threshold = AlertThreshold.load()
+        await NotificationService.shared.check(appState: appState, threshold: threshold)
     }
 }
 
