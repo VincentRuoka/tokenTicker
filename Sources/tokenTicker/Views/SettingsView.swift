@@ -61,6 +61,9 @@ private struct ProvidersTab: View {
             openRouterKey = Keychain.load(for: Keychain.openRouterAPIKey) ?? ""
             claudeConnected = Keychain.load(for: Keychain.claudeAccessToken) != nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: .tokenTickerOAuthComplete)) { _ in
+            claudeConnected = Keychain.load(for: Keychain.claudeAccessToken) != nil
+        }
     }
 
     private func saveOpenRouterKey() {
@@ -87,6 +90,8 @@ private struct AlertsTab: View {
     @State private var balanceText: String = ""
     @State private var claudeText: String = ""
 
+    @FocusState private var focusedField: String?
+
     private static let usdFormatter: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
@@ -110,21 +115,24 @@ private struct AlertsTab: View {
                     label: "Daily spend above ($)",
                     enabled: $dailyEnabled,
                     text: $dailyText,
-                    placeholder: "5.00"
+                    placeholder: "5.00",
+                    fieldID: "daily"
                 ) { save() }
 
                 alertRow(
                     label: "Monthly spend above ($)",
                     enabled: $monthlyEnabled,
                     text: $monthlyText,
-                    placeholder: "50.00"
+                    placeholder: "50.00",
+                    fieldID: "monthly"
                 ) { save() }
 
                 alertRow(
                     label: "OpenRouter balance below ($)",
                     enabled: $balanceEnabled,
                     text: $balanceText,
-                    placeholder: "10.00"
+                    placeholder: "10.00",
+                    fieldID: "balance"
                 ) { save() }
             }
 
@@ -133,7 +141,8 @@ private struct AlertsTab: View {
                     label: "Claude utilization above (%)",
                     enabled: $claudeEnabled,
                     text: $claudeText,
-                    placeholder: "80"
+                    placeholder: "80",
+                    fieldID: "claude"
                 ) { save() }
                 Text("Enter 0–100. E.g. 80 = 80% utilization.")
                     .font(.caption)
@@ -141,6 +150,7 @@ private struct AlertsTab: View {
             }
         }
         .formStyle(.grouped)
+        .onChange(of: focusedField) { _, _ in save() }
         .onAppear { loadThreshold() }
     }
 
@@ -150,6 +160,7 @@ private struct AlertsTab: View {
         enabled: Binding<Bool>,
         text: Binding<String>,
         placeholder: String,
+        fieldID: String,
         onChange: @escaping () -> Void
     ) -> some View {
         HStack {
@@ -160,6 +171,7 @@ private struct AlertsTab: View {
                 .frame(width: 80)
                 .multilineTextAlignment(.trailing)
                 .disabled(!enabled.wrappedValue)
+                .focused($focusedField, equals: fieldID)
                 .onSubmit { onChange() }
         }
     }
@@ -181,15 +193,54 @@ private struct AlertsTab: View {
     }
 
     private func save() {
-        threshold.dailySpendAboveUSD   = dailyEnabled   ? doubleFrom(dailyText)   : nil
-        threshold.monthlySpendAboveUSD = monthlyEnabled ? doubleFrom(monthlyText) : nil
-        threshold.openRouterBalanceBelowUSD = balanceEnabled ? doubleFrom(balanceText) : nil
+        // Daily spend
+        if dailyEnabled {
+            if let v = doubleFrom(dailyText) {
+                threshold.dailySpendAboveUSD = v
+            } else {
+                dailyEnabled = false
+                threshold.dailySpendAboveUSD = nil
+            }
+        } else {
+            threshold.dailySpendAboveUSD = nil
+        }
+
+        // Monthly spend
+        if monthlyEnabled {
+            if let v = doubleFrom(monthlyText) {
+                threshold.monthlySpendAboveUSD = v
+            } else {
+                monthlyEnabled = false
+                threshold.monthlySpendAboveUSD = nil
+            }
+        } else {
+            threshold.monthlySpendAboveUSD = nil
+        }
+
+        // OpenRouter balance
+        if balanceEnabled {
+            if let v = doubleFrom(balanceText) {
+                threshold.openRouterBalanceBelowUSD = v
+            } else {
+                balanceEnabled = false
+                threshold.openRouterBalanceBelowUSD = nil
+            }
+        } else {
+            threshold.openRouterBalanceBelowUSD = nil
+        }
+
         // Convert percent display (0–100) back to fraction (0.0–1.0)
-        if claudeEnabled, let pct = doubleFrom(claudeText) {
-            threshold.claudeUtilizationAbovePct = pct / 100.0
+        if claudeEnabled {
+            if let pct = doubleFrom(claudeText) {
+                threshold.claudeUtilizationAbovePct = pct / 100.0
+            } else {
+                claudeEnabled = false
+                threshold.claudeUtilizationAbovePct = nil
+            }
         } else {
             threshold.claudeUtilizationAbovePct = nil
         }
+
         threshold.save()
     }
 

@@ -54,6 +54,7 @@ final class ClaudeService: ProviderService {
             _ = Keychain.save(tokens.accessToken, for: Keychain.claudeAccessToken)
             _ = Keychain.save(tokens.refreshToken ?? "", for: Keychain.claudeRefreshToken)
             _ = Keychain.save(String(tokens.expiresAt), for: Keychain.claudeExpiresAt)
+            NotificationCenter.default.post(name: .tokenTickerOAuthComplete, object: nil)
         } catch {
             print("Claude token exchange failed: \(error)")
         }

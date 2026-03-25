@@ -5,16 +5,21 @@ final class AggregatorService {
     private let appState: AppState
     private var timer: Timer?
     private var services: [ProviderService] = []
+    private var notificationObservers: [NSObjectProtocol] = []
 
     init(appState: AppState) {
         self.appState = appState
         rebuildServices()
     }
 
+    deinit {
+        notificationObservers.forEach { NotificationCenter.default.removeObserver($0) }
+    }
+
     func start() {
         // Listen for settings changes that require rebuilding services or restarting the timer.
         // Using NotificationCenter keeps SettingsView fully decoupled from AggregatorService.
-        NotificationCenter.default.addObserver(
+        let rebuildObserver = NotificationCenter.default.addObserver(
             forName: .tokenTickerRebuildServices,
             object: nil,
             queue: .main
@@ -23,7 +28,7 @@ final class AggregatorService {
                 self?.rebuildServices()
             }
         }
-        NotificationCenter.default.addObserver(
+        let timerObserver = NotificationCenter.default.addObserver(
             forName: .tokenTickerRestartTimer,
             object: nil,
             queue: .main
@@ -33,6 +38,7 @@ final class AggregatorService {
                 self?.startTimer()
             }
         }
+        notificationObservers = [rebuildObserver, timerObserver]
         refresh()
         startTimer()
     }
@@ -96,4 +102,5 @@ private extension Int {
 extension Notification.Name {
     static let tokenTickerRebuildServices = Notification.Name("tokenTickerRebuildServices")
     static let tokenTickerRestartTimer    = Notification.Name("tokenTickerRestartTimer")
+    static let tokenTickerOAuthComplete   = Notification.Name("tokenTickerOAuthComplete")
 }
