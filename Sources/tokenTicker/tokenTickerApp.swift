@@ -28,9 +28,24 @@ struct tokenTickerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var appState = AppState()
     @State private var aggregator: AggregatorService?
+    @AppStorage("showSpendInMenubar") private var showSpendInMenubar = false
+
+    private static let menubarFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale(identifier: "en_US")
+        f.minimumFractionDigits = 2
+        f.maximumFractionDigits = 2
+        return f
+    }()
+
+    private var menubarSpendText: String {
+        let formatted = Self.menubarFormatter.string(for: appState.totalCostToday) ?? "0.00"
+        return "$\(formatted)"
+    }
 
     var body: some Scene {
-        MenuBarExtra("tokenTicker", systemImage: "circle.dotted") {
+        MenuBarExtra {
             PopoverView()
                 .environment(appState)
                 .onAppear {
@@ -45,6 +60,12 @@ struct tokenTickerApp: App {
                 .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
                     syncProxy()
                 }
+        } label: {
+            if showSpendInMenubar {
+                Text("🪙 \(menubarSpendText)")
+            } else {
+                Image(systemName: "circle.dotted")
+            }
         }
         .menuBarExtraStyle(.window)
 
