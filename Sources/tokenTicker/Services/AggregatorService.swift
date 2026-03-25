@@ -55,6 +55,12 @@ final class AggregatorService {
                 appState.snapshots[snapshot.provider] = snapshot
             }
         }
+        // Persist successful fetches to history
+        for (providerID, snapshot) in appState.snapshots {
+            if snapshot.error == nil {
+                HistoryStore.shared.persist(provider: providerID, cost: snapshot.costToday)
+            }
+        }
     }
 }
 
