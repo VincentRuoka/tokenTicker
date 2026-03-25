@@ -16,6 +16,14 @@ final class ProxyServer {
 
     private let queue = DispatchQueue(label: "com.tokenTicker.proxyServer", qos: .utility)
 
+    /// Serial queue that serializes all log file reads and writes, preventing TOCTOU races.
+    // nonisolated(unsafe) is required: appendLogEntry and rotateLog are nonisolated statics
+    // that access logQueue; without it the compiler infers MainActor isolation from the class.
+    private nonisolated(unsafe) static let logQueue = DispatchQueue(label: "com.tokenticker.proxylog")
+
+    /// Guards against connections arriving after `stop()` but before the listener fully cancels.
+    private var isStopped = false
+
     private init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let configDir = home.appendingPathComponent(".config/tokenTicker")
@@ -24,9 +32,12 @@ final class ProxyServer {
     }
 
     func start(port: UInt16 = 11435) {
-        // Rotate log on startup
+        isStopped = false
+
+        // Rotate log on startup — run on logQueue to avoid racing with appendLogEntry
         let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        Self.rotateLog(url: logURL, cutoffDate: cutoff)
+        let rotateURL = logURL
+        Self.logQueue.async { ProxyServer.rotateLog(url: rotateURL, cutoffDate: cutoff) }
 
         guard listener == nil else { return }
 
@@ -58,7 +69,8 @@ final class ProxyServer {
 
         newListener.newConnectionHandler = { [weak self] connection in
             Task { @MainActor in
-                self?.handleIncoming(connection)
+                guard let self, !self.isStopped else { connection.cancel(); return }
+                self.handleIncoming(connection)
             }
         }
 
@@ -67,12 +79,13 @@ final class ProxyServer {
     }
 
     func stop() {
-        listener?.cancel()
-        listener = nil
+        isStopped = true
         for conn in connections.values {
             conn.cancel()
         }
         connections.removeAll()
+        listener?.cancel()
+        listener = nil
     }
 
     // MARK: - Connection Handling
@@ -94,13 +107,15 @@ final class ProxyServer {
 
         clientConn.start(queue: queue)
 
-        // Read the request from the client, then open upstream and proxy it
+        // Read the request from the client, then open upstream and proxy it.
+        // The completion fires on `queue`, so hop to MainActor before calling the
+        // @MainActor-isolated forwardToUpstream.
         readAll(from: clientConn) { [weak self] requestData in
-            guard let self, let requestData else {
-                clientConn.cancel()
-                return
+            Task { @MainActor [weak self] in
+                guard let self else { clientConn.cancel(); return }
+                guard let requestData else { clientConn.cancel(); return }
+                self.forwardToUpstream(requestData: requestData, clientConn: clientConn)
             }
-            self.forwardToUpstream(requestData: requestData, clientConn: clientConn)
         }
     }
 
@@ -147,8 +162,12 @@ final class ProxyServer {
         )
 
         let logURL = self.logURL
+        let upstreamKey = ObjectIdentifier(upstream)
 
-        upstream.stateUpdateHandler = { state in
+        // Fix 2: capture upstream weakly to break the retain cycle
+        // (upstream holds the closure; the closure captures upstream).
+        upstream.stateUpdateHandler = { [weak upstream, weak self] state in
+            guard let upstream else { return }
             switch state {
             case .ready:
                 // Send request bytes to upstream
@@ -167,14 +186,22 @@ final class ProxyServer {
                 })
             case .failed(let error):
                 print("[ProxyServer] Upstream connection failed: \(error)")
-                clientConn.cancel()
+                Task { @MainActor [weak self] in
+                    self?.connections.removeValue(forKey: upstreamKey)
+                    clientConn.cancel()
+                }
             case .cancelled:
-                break
+                Task { @MainActor [weak self] in
+                    self?.connections.removeValue(forKey: upstreamKey)
+                }
             default:
                 break
             }
         }
 
+        // Fix 1: retain upstream in connections so it isn't held only by the closure chain.
+        // forwardToUpstream is @MainActor-isolated, so we can access connections directly.
+        connections[upstreamKey] = upstream
         upstream.start(queue: queue)
     }
 
@@ -193,12 +220,14 @@ final class ProxyServer {
             }
 
             if isComplete || error != nil {
-                // Upstream done — close client and parse log
+                // Upstream done — close client and parse log.
+                // Fix 5: cancel upstream only after the final client send completes so the
+                // client FIN is acknowledged before upstream tears down.
                 client.send(content: nil, contentContext: .finalMessage,
                             isComplete: true, completion: .contentProcessed { _ in
+                    upstream.cancel()
                     client.cancel()
                 })
-                upstream.cancel()
                 // Parse token counts from accumulated response
                 Self.parseAndLog(responseData: buffer, logURL: logURL)
             } else {
@@ -260,14 +289,18 @@ final class ProxyServer {
         line += "\n"
         guard let lineData = line.data(using: .utf8) else { return }
 
-        if FileManager.default.fileExists(atPath: logURL.path) {
-            if let handle = try? FileHandle(forWritingTo: logURL) {
-                handle.seekToEndOfFile()
-                handle.write(lineData)
-                try? handle.close()
+        // Fix 4: serialize all file I/O on logQueue to prevent TOCTOU races and
+        // interleaved writes from concurrent calls.
+        logQueue.sync {
+            if FileManager.default.fileExists(atPath: logURL.path) {
+                if let handle = try? FileHandle(forWritingTo: logURL) {
+                    handle.seekToEndOfFile()
+                    handle.write(lineData)
+                    try? handle.close()
+                }
+            } else {
+                try? lineData.write(to: logURL, options: .atomic)
             }
-        } else {
-            try? lineData.write(to: logURL, options: .atomic)
         }
     }
 
