@@ -31,8 +31,7 @@ struct tokenTickerApp: App {
 
     var body: some Scene {
         MenuBarExtra("tokenTicker", systemImage: "circle.dotted") {
-            Text("Loading...")
-                .padding()
+            PopoverView()
                 .environment(appState)
                 .onAppear {
                     if aggregator == nil {
