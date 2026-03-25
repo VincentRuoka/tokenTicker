@@ -44,6 +44,8 @@ struct ProviderRowView: View {
 
     private static let costFormatter: NumberFormatter = {
         let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale(identifier: "en_US")
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 4
         return f

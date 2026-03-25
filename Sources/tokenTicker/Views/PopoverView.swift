@@ -84,11 +84,17 @@ struct PopoverView: View {
         visibleSnapshots.map { SpendBarSegment(id: $0.provider, value: $0.costToday) }
     }
 
+    private static let tileFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale(identifier: "en_US")
+        f.minimumFractionDigits = 2
+        f.maximumFractionDigits = 2
+        return f
+    }()
+
     private func formatted(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: value as NSDecimalNumber) ?? "0.00"
+        Self.tileFormatter.string(from: value as NSDecimalNumber) ?? "0.00"
     }
 
     private func openSettings() {
