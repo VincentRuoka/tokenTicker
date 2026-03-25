@@ -72,7 +72,7 @@ final class OpenRouterService: ProviderService {
               let total = dataObj["total_credits"] as? Double,
               let usage = dataObj["usage"] as? Double
         else { return nil }
-        return Decimal(total - usage)
+        return Decimal(total) - Decimal(usage)
     }
 
     static func parseCost(from data: Data) throws -> Decimal? {
@@ -80,7 +80,7 @@ final class OpenRouterService: ProviderService {
         guard let dataObj = json?["data"] as? [String: Any],
               let cost = dataObj["total_cost"] as? Double
         else { return nil }
-        return Decimal(cost)
+        return Decimal(string: String(cost))
     }
 }
 
