@@ -12,8 +12,8 @@ final class PKCEHelperTests: XCTestCase {
     func testCodeChallengeIsDeterministic() {
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
         let challenge = PKCEHelper.challenge(for: verifier)
-        // Known SHA256 base64url of the above string
-        XCTAssertFalse(challenge.isEmpty)
+        // Known SHA-256 base64url of the above verifier (RFC 7636)
+        XCTAssertEqual(challenge, "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
         XCTAssertFalse(challenge.contains("+"))
         XCTAssertFalse(challenge.contains("/"))
         XCTAssertFalse(challenge.contains("="))

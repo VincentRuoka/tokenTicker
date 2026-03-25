@@ -3,20 +3,24 @@ import Foundation
 import Security
 
 enum Keychain {
-    static func save(_ value: String, for key: String) {
+    @discardableResult
+    static func save(_ value: String, for key: String) -> Bool {
         let data = Data(value.utf8)
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.tokenticker",
             kSecAttrAccount: key,
             kSecValueData: data
         ]
         SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
+        let status = SecItemAdd(query as CFDictionary, nil)
+        return status == errSecSuccess
     }
 
     static func load(for key: String) -> String? {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.tokenticker",
             kSecAttrAccount: key,
             kSecReturnData: true,
             kSecMatchLimit: kSecMatchLimitOne
@@ -30,6 +34,7 @@ enum Keychain {
     static func delete(for key: String) {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.tokenticker",
             kSecAttrAccount: key
         ]
         SecItemDelete(query as CFDictionary)
