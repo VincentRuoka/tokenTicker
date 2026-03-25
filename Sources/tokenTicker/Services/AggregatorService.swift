@@ -15,9 +15,11 @@ final class AggregatorService {
         refresh()
         let interval = Double(UserDefaults.standard.integer(forKey: "pollingIntervalSeconds")
                               .nonZero ?? 300)
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        let t = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     func stop() {
@@ -40,7 +42,7 @@ final class AggregatorService {
             OpenRouterService(apiKey: Keychain.load(for: Keychain.openRouterAPIKey)),
             OllamaLocalService(),
             OllamaCloudService(),
-            ClaudeService()
+            ClaudeService.shared
         ]
     }
 
