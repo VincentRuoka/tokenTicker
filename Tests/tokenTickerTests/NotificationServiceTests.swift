@@ -4,17 +4,21 @@ import XCTest
 @MainActor
 final class NotificationServiceTests: XCTestCase {
 
-    var service: NotificationService!
+    var suiteName: String!
     var defaults: UserDefaults!
+    var service: NotificationService!
 
     override func setUp() {
-        let suiteName = "test_\(UUID().uuidString)"
+        suiteName = "test_\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)!
         service = NotificationService(defaults: defaults)
     }
 
     override func tearDown() {
-        defaults.removePersistentDomain(forName: defaults.description)
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults = nil
+        service = nil
+        suiteName = nil
     }
 
     // MARK: - Test 1: Dedup prevents double fire

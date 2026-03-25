@@ -25,12 +25,12 @@ final class NotificationService {
             let key = dedupKey("dailySpend")
             if shouldFire(key: key) {
                 let spent = appState.totalCostToday
+                markFired(key: key)
                 await fire(
-                    key: key,
+                    key,
                     title: "Daily Spend Alert",
                     body: "Daily spend \(formatUSD(spent)) exceeded \(formatUSD(Decimal(dailyLimit))) threshold"
                 )
-                markFired(key: key)
             }
         }
 
@@ -40,12 +40,12 @@ final class NotificationService {
             let key = dedupKey("monthlySpend")
             if shouldFire(key: key) {
                 let spent = appState.totalCostThisMonth
+                markFired(key: key)
                 await fire(
-                    key: key,
+                    key,
                     title: "Monthly Spend Alert",
                     body: "Monthly spend \(formatUSD(spent)) exceeded \(formatUSD(Decimal(monthlyLimit)))"
                 )
-                markFired(key: key)
             }
         }
 
@@ -55,12 +55,12 @@ final class NotificationService {
            balance < Decimal(balanceLimit) {
             let key = dedupKey("openRouterBalance")
             if shouldFire(key: key) {
+                markFired(key: key)
                 await fire(
-                    key: key,
+                    key,
                     title: "OpenRouter Balance Low",
                     body: "OpenRouter balance \(formatUSD(balance)) below \(formatUSD(Decimal(balanceLimit)))"
                 )
-                markFired(key: key)
             }
         }
 
@@ -72,12 +72,12 @@ final class NotificationService {
             let key = dedupKey("claudeUtilization")
             if shouldFire(key: key) {
                 let pct = Int(utilization.fiveHourPct * 100)
+                markFired(key: key)
                 await fire(
-                    key: key,
+                    key,
                     title: "Claude Utilization Alert",
                     body: "Claude 5h usage at \(pct)%"
                 )
-                markFired(key: key)
             }
         }
     }
@@ -135,15 +135,18 @@ final class NotificationService {
         "\(alertType)_\(HistoryStore.dateKey())"
     }
 
-    private func fire(key: String, title: String, body: String) async {
+    @MainActor
+    private func fire(_ key: String, title: String, body: String) async {
         // Check authorization status; request if not yet determined
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
         if settings.authorizationStatus == .notDetermined {
             await requestAuthorization()
         }
-        guard settings.authorizationStatus == .authorized ||
-              settings.authorizationStatus == .provisional else { return }
+        // Re-fetch after possible authorization request
+        let freshSettings = await center.notificationSettings()
+        guard freshSettings.authorizationStatus == .authorized ||
+              freshSettings.authorizationStatus == .provisional else { return }
 
         let content = UNMutableNotificationContent()
         content.title = title
