@@ -39,6 +39,11 @@ struct tokenTickerApp: App {
                         aggregator = agg
                         agg.start()
                     }
+                    // Start proxy if enabled
+                    syncProxy()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+                    syncProxy()
                 }
         }
         .menuBarExtraStyle(.window)
@@ -46,6 +51,18 @@ struct tokenTickerApp: App {
         // Standard macOS Settings window — opened via gear button in PopoverView.
         Settings {
             SettingsView()
+        }
+    }
+
+    @MainActor
+    private func syncProxy() {
+        let enabled = UserDefaults.standard.bool(forKey: "ollamaProxyEnabled")
+        if enabled {
+            let stored = UserDefaults.standard.integer(forKey: "ollamaProxyPort")
+            let port = UInt16(stored > 0 ? stored : 11435)
+            ProxyServer.shared.start(port: port)
+        } else {
+            ProxyServer.shared.stop()
         }
     }
 }
