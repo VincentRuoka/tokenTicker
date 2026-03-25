@@ -3,7 +3,7 @@ import SwiftUI
 
 @main
 struct tokenTickerApp: App {
-    // @State private var appState = AppState()  // wired in Task 3
+    @State private var appState = AppState()
 
     var body: some Scene {
         MenuBarExtra("tokenTicker", systemImage: "circle.dotted") {
