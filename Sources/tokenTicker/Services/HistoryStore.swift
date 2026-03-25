@@ -20,16 +20,13 @@ final class HistoryStore {
     }
 
     nonisolated static func dateKey(for date: Date = .now) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = .current
-        return formatter.string(from: date)
+        Self.dateFormatter.string(from: date)
     }
 
     func persist(provider: ProviderID, cost: Decimal) {
         let key = Self.dateKey()
         var day = store.days[key] ?? [:]
-        day[provider.rawValue] = ProviderEntry(cost: "\(cost)", updatedAt: ISO8601DateFormatter().string(from: .now))
+        day[provider.rawValue] = ProviderEntry(cost: "\(cost)", updatedAt: Self.isoFormatter.string(from: .now))
         store.days[key] = day
         pruneOldEntries()
         save()
@@ -67,10 +64,11 @@ final class HistoryStore {
     // MARK: - Private
 
     private func pruneOldEntries() {
+        // Keep entries strictly within the last 30 days (today + 29 prior days = 30 entries max)
         let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: .now)!
         store.days = store.days.filter { key, _ in
             guard let date = Self.date(from: key) else { return false }
-            return date >= cutoff
+            return date > cutoff
         }
     }
 
@@ -87,10 +85,18 @@ final class HistoryStore {
     }
 
     private static func date(from key: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: key)
+        dateFormatter.date(from: key)
     }
+
+    // Cached formatters — DateFormatter and ISO8601DateFormatter are expensive to initialise
+    private nonisolated(unsafe) static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
+        return f
+    }()
+
+    private nonisolated(unsafe) static let isoFormatter = ISO8601DateFormatter()
 
     private func decimal(_ string: String?) -> Decimal {
         guard let s = string else { return 0 }
