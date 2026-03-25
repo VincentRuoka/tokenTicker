@@ -8,7 +8,7 @@ struct ClaudeUtilization {
     let sevenDayResetsAt: Date
 }
 
-enum ProviderError: Error, LocalizedError {
+enum ProviderError: Error, LocalizedError, Equatable {
     case missingCredentials
     case logNotFound
     case networkError(String)

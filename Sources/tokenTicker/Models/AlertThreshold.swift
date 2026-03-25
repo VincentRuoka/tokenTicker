@@ -25,7 +25,10 @@ extension AlertThreshold {
     }
 
     func save() {
-        guard let data = try? JSONEncoder().encode(self) else { return }
+        guard let data = try? JSONEncoder().encode(self) else {
+            assertionFailure("AlertThreshold: failed to encode — settings not saved")
+            return
+        }
         UserDefaults.standard.set(data, forKey: AlertThreshold.userDefaultsKey)
     }
 }

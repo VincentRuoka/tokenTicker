@@ -3,9 +3,13 @@ import Observation
 
 @Observable
 final class AppState {
-    var snapshots: [ProviderID: ProviderSnapshot] = [:]
+    var snapshots: [ProviderID: ProviderSnapshot]
     var lastRefreshedAt: Date?
     var isRefreshing: Bool = false
+
+    init() {
+        snapshots = Dictionary(uniqueKeysWithValues: ProviderID.allCases.map { ($0, .empty($0)) })
+    }
 
     var totalCostToday: Decimal {
         snapshots.values.reduce(0) { $0 + $1.costToday }
