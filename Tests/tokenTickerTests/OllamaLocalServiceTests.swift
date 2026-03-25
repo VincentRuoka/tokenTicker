@@ -43,6 +43,53 @@ final class OllamaLocalServiceTests: XCTestCase {
         XCTAssertEqual(cost, Decimal(0), "Expected $0.00 cost when price per 1k is 0.0")
     }
 
+    // MARK: - testEmptyLogContent
+
+    func testEmptyLogContent() {
+        let result = OllamaLocalService.parseTokensFromLog(content: "", since: Date.distantPast)
+        XCTAssertEqual(result.promptTokens, 0, "Empty log should yield 0 prompt tokens")
+        XCTAssertEqual(result.completionTokens, 0, "Empty log should yield 0 completion tokens")
+    }
+
+    // MARK: - testLinesBeforeSinceAreExcluded
+
+    func testLinesBeforeSinceAreExcluded() {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        let yesterdayISO = formatter.string(from: yesterday)
+        let todayISO = formatter.string(from: Date())
+
+        let content = """
+        time=\(yesterdayISO) level=INFO msg="prompt eval count: 100 tokens"
+        time=\(yesterdayISO) level=INFO msg="eval count: 200 tokens"
+        time=\(todayISO) level=INFO msg="prompt eval count: 10 tokens"
+        time=\(todayISO) level=INFO msg="eval count: 20 tokens"
+        """
+
+        let since = Calendar.current.startOfDay(for: Date())
+        let result = OllamaLocalService.parseTokensFromLog(content: content, since: since)
+
+        XCTAssertEqual(result.promptTokens, 10, "Only today's prompt tokens should be counted")
+        XCTAssertEqual(result.completionTokens, 20, "Only today's completion tokens should be counted")
+    }
+
+    // MARK: - testMalformedLineIsSkipped
+
+    func testMalformedLineIsSkipped() {
+        let todayISO = isoStringForToday()
+        let content = """
+        time=\(todayISO) level=INFO msg="eval count: NOTANUMBER tokens"
+        """
+
+        let since = Calendar.current.startOfDay(for: Date())
+        let result = OllamaLocalService.parseTokensFromLog(content: content, since: since)
+
+        XCTAssertEqual(result.promptTokens, 0, "Malformed line should produce 0 prompt tokens")
+        XCTAssertEqual(result.completionTokens, 0, "Malformed line should produce 0 completion tokens")
+    }
+
     // MARK: - Helpers
 
     /// Returns an ISO8601 string for "now" that the server log parser will accept as today.

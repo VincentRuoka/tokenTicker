@@ -27,7 +27,12 @@ final class OllamaLocalService: ProviderService {
                 .appendingPathComponent(".ollama/logs/server.log")
         }
 
-        guard let content = try? String(contentsOf: logURL, encoding: .utf8) else {
+        let content: String
+        do {
+            content = try await Task.detached(priority: .utility) {
+                try String(contentsOf: logURL, encoding: .utf8)
+            }.value
+        } catch {
             let monthCost = await MainActor.run { HistoryStore.shared.costThisMonth(for: .ollamaLocal) }
             return ProviderSnapshot(
                 provider: .ollamaLocal,
@@ -71,7 +76,7 @@ final class OllamaLocalService: ProviderService {
             pricePerK = injected
         } else {
             let raw = UserDefaults.standard.double(forKey: "ollamaTokenPricePerK")
-            pricePerK = Decimal(raw)
+            pricePerK = Decimal(string: String(raw)) ?? 0
         }
         return Decimal(totalTokens) * pricePerK / 1000
     }
@@ -109,7 +114,8 @@ final class OllamaLocalService: ProviderService {
                 ?? formatterNoFrac.date(from: timestampStr)
             guard let date = lineDate, date >= since else { continue }
 
-            // Classify line
+            // Check for "prompt eval count:" before "eval count:" — the latter is a substring
+            // of the former, so order matters. Using else-if guarantees mutual exclusion.
             if line.contains("prompt eval count:") {
                 // Extract token count from "prompt eval count: N tokens"
                 if let n = extractNumber(after: "prompt eval count:", in: line) {
