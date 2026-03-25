@@ -44,6 +44,16 @@ struct tokenTickerApp: App {
         return "$\(formatted)"
     }
 
+    private var menubarIconName: String {
+        if appState.isRefreshing { return "arrow.clockwise" }
+        let snapshots = Array(appState.snapshots.values)
+        let allFailed = !snapshots.isEmpty && snapshots.allSatisfy {
+            $0.error != nil && $0.error != .missingCredentials
+        }
+        if allFailed { return "exclamationmark.circle" }
+        return "circle.dotted"
+    }
+
     var body: some Scene {
         MenuBarExtra {
             PopoverView()
@@ -64,7 +74,7 @@ struct tokenTickerApp: App {
             if showSpendInMenubar {
                 Text("🪙 \(menubarSpendText)")
             } else {
-                Image(systemName: "circle.dotted")
+                Image(systemName: menubarIconName)
             }
         }
         .menuBarExtraStyle(.window)

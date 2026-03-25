@@ -4,6 +4,54 @@ struct PopoverView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
+        if isInitialLoading {
+            loadingView
+        } else if visibleSnapshots.isEmpty && !appState.isRefreshing {
+            emptyStateView
+        } else {
+            fullContentView
+        }
+    }
+
+    // MARK: - State helpers
+
+    private var isInitialLoading: Bool {
+        appState.isRefreshing && appState.totalCostToday == 0 && visibleSnapshots.isEmpty
+    }
+
+    // MARK: - Sub-views
+
+    private var loadingView: some View {
+        VStack(spacing: 8) {
+            ProgressView()
+            Text("Loading...")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 280, height: 120)
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "key.slash")
+                .font(.system(size: 32))
+                .foregroundStyle(.secondary)
+            Text("No providers configured")
+                .font(.headline)
+            Text("Add API keys in Settings to start tracking costs.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Open Settings") {
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            }
+            .buttonStyle(.bordered)
+        }
+        .frame(width: 280, height: 200)
+        .padding()
+    }
+
+    private var fullContentView: some View {
         VStack(spacing: 0) {
             // Stat tiles
             HStack(spacing: 0) {
@@ -70,6 +118,8 @@ struct PopoverView: View {
         }
         .frame(width: 280)
     }
+
+    // MARK: - Helpers
 
     private var visibleSnapshots: [ProviderSnapshot] {
         ProviderID.allCases.compactMap { id -> ProviderSnapshot? in
