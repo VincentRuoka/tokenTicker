@@ -42,5 +42,10 @@ struct tokenTickerApp: App {
                 }
         }
         .menuBarExtraStyle(.window)
+
+        // Standard macOS Settings window — opened via gear button in PopoverView.
+        Settings {
+            SettingsView()
+        }
     }
 }

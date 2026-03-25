@@ -61,6 +61,11 @@ final class HistoryStore {
 
     func allDateKeys() -> [String] { Array(store.days.keys) }
 
+    func deleteAll() {
+        store.days = [:]
+        save()
+    }
+
     // MARK: - Private
 
     private func pruneOldEntries() {
