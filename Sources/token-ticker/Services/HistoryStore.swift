@@ -28,7 +28,6 @@ final class HistoryStore {
         var day = store.days[key] ?? [:]
         day[provider.rawValue] = ProviderEntry(cost: "\(cost)", updatedAt: Self.isoFormatter.string(from: .now))
         store.days[key] = day
-        pruneOldEntries()
         save()
     }
 
@@ -62,7 +61,7 @@ final class HistoryStore {
 
     func allDateKeys() -> [String] { Array(store.days.keys) }
 
-    /// Sum of all stored daily costs for a provider (up to 30 days of history).
+    /// Sum of all stored daily costs for a provider across all stored history.
     func totalStoredCost(for provider: ProviderID) -> Decimal {
         store.days.values
             .compactMap { $0[provider.rawValue]?.cost }
@@ -89,14 +88,6 @@ final class HistoryStore {
     }
 
     // MARK: - Private
-
-    private func pruneOldEntries() {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: .now)!
-        store.days = store.days.filter { key, _ in
-            guard let date = Self.date(from: key) else { return false }
-            return date > cutoff
-        }
-    }
 
     private func load() {
         guard let data = try? Data(contentsOf: fileURL),
