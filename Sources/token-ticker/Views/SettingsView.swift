@@ -52,6 +52,13 @@ private struct ProvidersTab: View {
     @AppStorage("provider.ollamaLocal.enabled") private var ollamaLocalEnabled = false
     @AppStorage("provider.ollamaCloud.enabled") private var ollamaCloudEnabled = false
 
+    // OpenRouter metric visibility
+    @AppStorage("showOR_total") private var showORTotal = true
+    @AppStorage("showOR_30d")   private var showOR30d   = true
+    @AppStorage("showOR_7d")    private var showOR7d    = false
+    @AppStorage("showOR_week")  private var showORWeek  = false
+    @AppStorage("showOR_month") private var showORMonth = false
+
     // OpenRouter
     @State private var openRouterKey   = ""
     @State private var openRouterSaved = false
@@ -98,6 +105,18 @@ private struct ProvidersTab: View {
                 }
             } header: {
                 Label("OpenRouter", systemImage: "arrow.2.circlepath")
+            }
+
+            if openRouterEnabled {
+                Section {
+                    Toggle("Total (all time)", isOn: $showORTotal)
+                    Toggle("Last 30 days",     isOn: $showOR30d)
+                    Toggle("Last 7 days",      isOn: $showOR7d)
+                    Toggle("Current week",     isOn: $showORWeek)
+                    Toggle("Current month",    isOn: $showORMonth)
+                } header: {
+                    Label("OpenRouter Metrics", systemImage: "chart.bar")
+                }
             }
 
             // ── Claude ──────────────────────────────────────────────────
