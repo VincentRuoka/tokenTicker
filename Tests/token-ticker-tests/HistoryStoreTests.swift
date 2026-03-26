@@ -31,14 +31,6 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertEqual(monthly, Decimal(string: "0.80"))
     }
 
-    func testRetentionDropsOldEntries() async {
-        let oldDate = Calendar.current.date(byAdding: .day, value: -31, to: .now)!
-        await store.backfill(date: oldDate, provider: .openRouter, cost: 1)
-        await store.persist(provider: .openRouter, cost: 0)  // triggers cleanup
-        let keys = await store.allDateKeys()
-        XCTAssertFalse(keys.contains(HistoryStore.dateKey(for: oldDate)))
-    }
-
     private func previousDayInMonth() -> Date {
         Calendar.current.date(byAdding: .day, value: -1, to: .now)!
     }

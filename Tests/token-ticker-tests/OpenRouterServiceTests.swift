@@ -13,11 +13,13 @@ final class OpenRouterServiceTests: XCTestCase {
     }
 
     func testParseActivityResponse() throws {
+        // parseCost expects {"data": [{usage, date}]} and sums entries in the current month
+        let today = ISO8601DateFormatter().string(from: .now).prefix(10) // "yyyy-MM-dd"
         let json = """
-        {"data":{"total_cost":1.23}}
+        {"data":[{"usage":1.23,"date":"\(today) 00:00:00"}]}
         """.data(using: .utf8)!
 
-        let cost = OpenRouterService.parseCost(from: json)
+        let cost = OpenRouterService.parseCost(from: json, granularity: .month)
         XCTAssertEqual(cost, Decimal(string: "1.23"))
     }
 
