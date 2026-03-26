@@ -46,11 +46,10 @@ final class OpenRouterService: ProviderService {
 
     private func fetchActivityRaw(key: String) async throws -> Data {
         var comps = URLComponents(string: "https://openrouter.ai/api/v1/activity")!
-        // Fetch a wide window — API ignores start_time and returns more than requested,
-        // so we filter on the client side using the entry's "date" field.
-        let wideStart = Calendar.current.date(byAdding: .day, value: -90, to: .now)!
+        // start_time=0 requests maximum history; the API currently returns its own
+        // fixed window regardless, but this future-proofs the request.
         comps.queryItems = [
-            .init(name: "start_time", value: String(Int(wideStart.timeIntervalSince1970))),
+            .init(name: "start_time", value: "0"),
             .init(name: "end_time",   value: String(Int(Date.now.timeIntervalSince1970)))
         ]
         return try await fetchRaw(url: comps.url!, key: key)
