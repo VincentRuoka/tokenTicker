@@ -49,6 +49,20 @@ final class HistoryStore {
             .reduce(0, +)
     }
 
+    func cost(for provider: ProviderID, lastDays: Int) -> Decimal {
+        guard lastDays > 0 else { return 0 }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        return (0..<lastDays).reduce(into: Decimal(0)) { total, offset in
+            guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { return }
+            let key = Self.dateKey(for: date)
+            if let costStr = store.days[key]?[provider.rawValue]?.cost,
+               let cost = Decimal(string: costStr) {
+                total += cost
+            }
+        }
+    }
+
     func backfill(date: Date, provider: ProviderID, cost: Decimal) {
         let key = Self.dateKey(for: date)
         var day = store.days[key] ?? [:]
