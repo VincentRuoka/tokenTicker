@@ -69,4 +69,28 @@ final class HistoryStoreTests: XCTestCase {
         let result = await store.cost(for: .openRouter, lastDays: 30)
         XCTAssertEqual(result, 0)
     }
+
+    func testCostCurrentWeekExcludesPreviousSunday() async {
+        var cal = Calendar.current
+        cal.firstWeekday = 2  // Monday
+        guard let interval = cal.dateInterval(of: .weekOfYear, for: .now) else {
+            XCTFail("Could not compute week interval")
+            return
+        }
+        let monday    = cal.startOfDay(for: interval.start)
+        let wednesday = cal.date(byAdding: .day, value: 2, to: monday)!
+        let prevSun   = cal.date(byAdding: .day, value: -1, to: monday)!
+
+        await store.backfill(date: monday,    provider: .openRouter, cost: Decimal(string: "1.00")!)
+        await store.backfill(date: wednesday, provider: .openRouter, cost: Decimal(string: "2.00")!)
+        await store.backfill(date: prevSun,   provider: .openRouter, cost: Decimal(string: "9.00")!)
+
+        let result = await store.costCurrentWeek(for: .openRouter)
+        XCTAssertEqual(result, Decimal(string: "3.00")!)  // monday + wednesday; prevSun excluded
+    }
+
+    func testCostCurrentWeekEmptyReturnsZero() async {
+        let result = await store.costCurrentWeek(for: .openRouter)
+        XCTAssertEqual(result, 0)
+    }
 }

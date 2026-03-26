@@ -63,6 +63,25 @@ final class HistoryStore {
         }
     }
 
+    func costCurrentWeek(for provider: ProviderID) -> Decimal {
+        var cal = Calendar.current
+        cal.firstWeekday = 2  // Monday; ISO week regardless of system locale
+        guard let interval = cal.dateInterval(of: .weekOfYear, for: .now) else { return 0 }
+        var total = Decimal(0)
+        var date = cal.startOfDay(for: interval.start)
+        let end  = cal.startOfDay(for: interval.end)
+        while date < end {
+            let key = Self.dateKey(for: date)
+            if let costStr = store.days[key]?[provider.rawValue]?.cost,
+               let cost = Decimal(string: costStr) {
+                total += cost
+            }
+            guard let next = cal.date(byAdding: .day, value: 1, to: date) else { break }
+            date = next
+        }
+        return total
+    }
+
     func backfill(date: Date, provider: ProviderID, cost: Decimal) {
         let key = Self.dateKey(for: date)
         var day = store.days[key] ?? [:]
