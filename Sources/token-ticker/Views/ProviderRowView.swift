@@ -2,6 +2,11 @@ import SwiftUI
 import Charts
 
 struct ProviderRowView: View {
+    @AppStorage("showOR_total") private var showTotal = true
+    @AppStorage("showOR_30d")   private var show30d   = true
+    @AppStorage("showOR_7d")    private var show7d    = false
+    @AppStorage("showOR_week")  private var showWeek  = false
+    @AppStorage("showOR_month") private var showMonth = false
     let snapshot: ProviderSnapshot
     var isExpanded: Bool = false
 
@@ -170,12 +175,20 @@ struct ProviderRowView: View {
             }
 
             // ── Detail rows (balance at bottom) ───────────────────────
-            if let month = snapshot.costThisMonth {
-                detailRow("Cost this month", value: "$\(formatted(month))")
+            if showTotal {
+                detailRow("Total", value: "$\(formatted(HistoryStore.shared.totalStoredCost(for: .openRouter)))")
             }
-            let total = HistoryStore.shared.totalStoredCost(for: .openRouter)
-            if total > 0 {
-                detailRow("Total cost", value: "$\(formatted(total))")
+            if show30d {
+                detailRow("Last 30 days", value: "$\(formatted(HistoryStore.shared.cost(for: .openRouter, lastDays: 30)))")
+            }
+            if show7d {
+                detailRow("Last 7 days", value: "$\(formatted(HistoryStore.shared.cost(for: .openRouter, lastDays: 7)))")
+            }
+            if showWeek {
+                detailRow("Current week", value: "$\(formatted(HistoryStore.shared.costCurrentWeek(for: .openRouter)))")
+            }
+            if showMonth {
+                detailRow("Current month", value: "$\(formatted(HistoryStore.shared.costThisMonth(for: .openRouter)))")
             }
             if let balance = snapshot.balance {
                 detailRow("Balance",
