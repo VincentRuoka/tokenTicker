@@ -2,20 +2,25 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>LSUIElement</key>
-    <true/>
-    <key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>tokenticker</string>
-            </array>
-            <key>CFBundleURLName</key>
-            <string>com.tokenticker.oauth</string>
-        </dict>
-    </array>
-    <key>NSUserNotificationsUsageDescription</key>
-    <string>tokenTicker uses notifications to alert you about spend thresholds.</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.tokenticker.app</string>
+	<key>CFBundleName</key>
+	<string>token-ticker</string>
+	<key>CFBundleExecutable</key>
+	<string>token-ticker</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>CFBundleIconFile</key>
+	<string>token-ticker</string>
 </dict>
 </plist>

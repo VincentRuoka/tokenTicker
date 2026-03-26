@@ -2,18 +2,21 @@
 import PackageDescription
 
 let package = Package(
-    name: "tokenTicker",
+    name: "token-ticker",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "tokenTicker",
-            path: "Sources/tokenTicker",
-            resources: [.process("../../Resources")]
+            name: "token-ticker",
+            path: "Sources/token-ticker",
+            resources: [
+                .process("Resources/token-ticker.png"),
+                .copy("Resources/icons")
+            ]
         ),
         .testTarget(
-            name: "tokenTickerTests",
-            dependencies: ["tokenTicker"],
-            path: "Tests/tokenTickerTests"
+            name: "token-ticker-tests",
+            dependencies: ["token-ticker"],
+            path: "Tests/token-ticker-tests"
         )
     ]
 )
