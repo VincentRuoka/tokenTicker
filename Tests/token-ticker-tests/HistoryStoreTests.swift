@@ -24,15 +24,20 @@ final class HistoryStoreTests: XCTestCase {
     }
 
     func testMonthlyTotalSumsAllDaysThisMonth() async {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
         await store.persist(provider: .ollamaLocal, cost: Decimal(string: "0.50")!)
-        // Simulate a previous day entry
-        await store.backfill(date: previousDayInMonth(), provider: .ollamaLocal, cost: Decimal(string: "0.30")!)
-        let monthly = await store.costThisMonth(for: .ollamaLocal)
-        XCTAssertEqual(monthly, Decimal(string: "0.80"))
-    }
-
-    private func previousDayInMonth() -> Date {
-        Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+        if cal.component(.day, from: today) > 1 {
+            // Yesterday is in the same month — safe to add a second entry
+            let yesterday = cal.date(byAdding: .day, value: -1, to: today)!
+            await store.backfill(date: yesterday, provider: .ollamaLocal, cost: Decimal(string: "0.30")!)
+            let monthly = await store.costThisMonth(for: .ollamaLocal)
+            XCTAssertEqual(monthly, Decimal(string: "0.80"))
+        } else {
+            // First of month: yesterday is in the prior month, only today counts
+            let monthly = await store.costThisMonth(for: .ollamaLocal)
+            XCTAssertEqual(monthly, Decimal(string: "0.50"))
+        }
     }
 
     func testCostLastDaysIncludesWindow() async {
