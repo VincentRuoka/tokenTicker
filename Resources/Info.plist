@@ -5,7 +5,9 @@
 	<key>CFBundleIdentifier</key>
 	<string>com.tokenticker.app</string>
 	<key>CFBundleName</key>
-	<string>token-ticker</string>
+	<string>Token Ticker</string>
+	<key>CFBundleDisplayName</key>
+	<string>Token Ticker</string>
 	<key>CFBundleExecutable</key>
 	<string>token-ticker</string>
 	<key>CFBundleShortVersionString</key>
