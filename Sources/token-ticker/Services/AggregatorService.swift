@@ -81,7 +81,7 @@ final class AggregatorService {
             }
             switch id {
             case .openRouter:  return OpenRouterService(apiKey: Keychain.load(for: Keychain.openRouterAPIKey))
-            case .ollamaLocal: return OllamaLocalService()
+            case .ollamaLocal: appState.snapshots[id] = nil; return nil  // coming in v2
             case .ollamaCloud: return OllamaCloudService()
             case .claude:      return ClaudeService.shared
             }

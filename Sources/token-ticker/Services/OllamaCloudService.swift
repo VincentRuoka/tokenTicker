@@ -6,8 +6,8 @@ final class OllamaCloudService: ProviderService {
     let providerID: ProviderID = .ollamaCloud
 
     func fetchSnapshot() async -> ProviderSnapshot {
-        ProviderSnapshot(provider: .ollamaCloud, costToday: 0,
-                         costThisMonth: nil, balance: nil,
+        ProviderSnapshot(provider: .ollamaCloud, costToday: 0, cost7d: 0, cost30d: 0,
+                         costThisMonth: nil, balance: nil, allTimeUsage: nil,
                          claudeUtilization: nil, updatedAt: .now,
                          error: .missingCredentials)
     }

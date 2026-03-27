@@ -31,15 +31,18 @@ enum ProviderError: Error, LocalizedError, Equatable {
 struct ProviderSnapshot {
     let provider: ProviderID
     let costToday: Decimal
+    let cost7d: Decimal            // last 7 days (direct from activity API)
+    let cost30d: Decimal           // last 30 days (direct from activity API)
     let costThisMonth: Decimal?    // nil = not available
     let balance: Decimal?          // nil = not applicable
+    let allTimeUsage: Decimal?     // nil = not available (OpenRouter only)
     let claudeUtilization: ClaudeUtilization?
     let updatedAt: Date
     let error: ProviderError?
 
     static func empty(_ provider: ProviderID) -> ProviderSnapshot {
-        ProviderSnapshot(provider: provider, costToday: 0, costThisMonth: nil,
-                         balance: nil, claudeUtilization: nil,
-                         updatedAt: .distantPast, error: .missingCredentials)
+        ProviderSnapshot(provider: provider, costToday: 0, cost7d: 0, cost30d: 0,
+                         costThisMonth: nil, balance: nil, allTimeUsage: nil,
+                         claudeUtilization: nil, updatedAt: .distantPast, error: .missingCredentials)
     }
 }

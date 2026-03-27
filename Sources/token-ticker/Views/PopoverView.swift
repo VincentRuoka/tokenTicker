@@ -28,7 +28,7 @@ struct PopoverView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
         }
-        .frame(width: 300, height: 110)
+        .frame(width: 360, height: 110)
         .background(Self.bg.ignoresSafeArea())
     }
 
@@ -55,7 +55,7 @@ struct PopoverView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
         }
-        .frame(width: 300, height: 210)
+        .frame(width: 360, height: 210)
         .padding()
         .background(Self.bg.ignoresSafeArea())
     }
@@ -64,46 +64,12 @@ struct PopoverView: View {
 
     private var contentView: some View {
         VStack(spacing: 0) {
-            statsSection
-            thinDivider
-            if spendSegments.contains(where: { $0.value > 0 }) {
-                barSection
-                thinDivider
-            }
             providerSection
             thinDivider
             footerSection
         }
-        .frame(width: 300)
+        .frame(width: 360)
         .background(Self.bg.ignoresSafeArea())
-    }
-
-    // MARK: - Stats
-
-    private var statsSection: some View {
-        HStack(alignment: .center, spacing: 0) {
-            StatTileView(
-                label: "Today",
-                value: "$\(formatted(appState.totalCostToday))",
-                valueColor: .primary
-            )
-            verticalSep
-            StatTileView(
-                label: "Cost this month",
-                value: "$\(formatted(appState.totalCostThisMonth))",
-                valueColor: .primary
-            )
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 15)
-        .padding(.bottom, 13)
-    }
-
-    private var verticalSep: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.1))
-            .frame(width: 1, height: 28)
-            .padding(.horizontal, 14)
     }
 
     // MARK: - Spend bar
@@ -215,16 +181,4 @@ struct PopoverView: View {
         visibleSnapshots.map { SpendBarSegment(id: $0.provider, value: $0.costToday) }
     }
 
-    private static let tileFormatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.locale = Locale(identifier: "en_US")
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        return f
-    }()
-
-    private func formatted(_ value: Decimal) -> String {
-        Self.tileFormatter.string(from: value as NSDecimalNumber) ?? "0.00"
-    }
 }

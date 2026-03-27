@@ -8,19 +8,20 @@ final class ClaudeService: ProviderService {
 
     func fetchSnapshot() async -> ProviderSnapshot {
         guard let cookie = Keychain.load(for: Keychain.claudeSessionCookie), !cookie.isEmpty else {
-            return .init(provider: .claude, costToday: 0, costThisMonth: nil,
-                         balance: nil, claudeUtilization: nil, updatedAt: .now,
-                         error: .missingCredentials)
+            return .init(provider: .claude, costToday: 0, cost7d: 0, cost30d: 0,
+                         costThisMonth: nil, balance: nil, allTimeUsage: nil,
+                         claudeUtilization: nil, updatedAt: .now, error: .missingCredentials)
         }
         do {
             let utilization = try await fetchUtilization(cookie: cookie)
             await ClaudeUsageHistory.shared.append(utilization)
-            return .init(provider: .claude, costToday: 0, costThisMonth: nil,
-                         balance: nil, claudeUtilization: utilization,
-                         updatedAt: .now, error: nil)
+            return .init(provider: .claude, costToday: 0, cost7d: 0, cost30d: 0,
+                         costThisMonth: nil, balance: nil, allTimeUsage: nil,
+                         claudeUtilization: utilization, updatedAt: .now, error: nil)
         } catch {
-            return .init(provider: .claude, costToday: 0, costThisMonth: nil,
-                         balance: nil, claudeUtilization: nil, updatedAt: .now,
+            return .init(provider: .claude, costToday: 0, cost7d: 0, cost30d: 0,
+                         costThisMonth: nil, balance: nil, allTimeUsage: nil,
+                         claudeUtilization: nil, updatedAt: .now,
                          error: .networkError(error.localizedDescription))
         }
     }

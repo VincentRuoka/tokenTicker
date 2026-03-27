@@ -18,26 +18,33 @@ final class OpenRouterService: ProviderService {
 
             let (bData, aData) = try await (balanceData, activityData)
 
-            let balance    = try Self.parseBalance(from: bData)
-            let costToday  = Self.parseCost(from: aData, granularity: .day)  ?? 0
-            let costMonth  = Self.parseCost(from: aData, granularity: .month) ?? 0
+            let balance      = try Self.parseBalance(from: bData)
+            let allTimeUsage = Self.parseTotalUsage(from: bData)
 
-            // Backfill historical data for the chart
+            let cost7d    = Self.parseCost(from: aData, lastDays: 7)
+            let cost30d   = Self.parseCost(from: aData, lastDays: 30)
+
+            // Backfill per-day data into HistoryStore so the cumulative chart stays accurate.
             await backfillHistory(from: aData)
 
             return ProviderSnapshot(
                 provider: .openRouter,
-                costToday: costToday,
-                costThisMonth: costMonth,
+                costToday: 0,
+                cost7d: cost7d,
+                cost30d: cost30d,
+                costThisMonth: nil,
                 balance: balance,
+                allTimeUsage: allTimeUsage,
                 claudeUtilization: nil,
                 updatedAt: .now,
                 error: nil
             )
         } catch {
             return ProviderSnapshot(provider: .openRouter, costToday: 0,
+                                    cost7d: 0, cost30d: 0,
                                     costThisMonth: nil, balance: nil,
-                                    claudeUtilization: nil, updatedAt: .now,
+                                    allTimeUsage: nil, claudeUtilization: nil,
+                                    updatedAt: .now,
                                     error: .networkError(error.localizedDescription))
         }
     }
@@ -152,13 +159,43 @@ final class OpenRouterService: ProviderService {
         return nil
     }
 
-    static func parseCost(from data: Data, granularity: Calendar.Component = .month) -> Decimal? {
+    /// Returns the all-time cumulative usage (total spend) from the /credits response.
+    static func parseTotalUsage(from data: Data) -> Decimal? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let dataObj = json["data"] as? [String: Any] else { return nil }
+        let usage = (dataObj["usage"] as? Double) ?? (dataObj["total_usage"] as? Double)
+        return usage.map { Decimal($0) }
+    }
+
+    /// Sums usage for entries whose local date falls within the last `lastDays` calendar days
+    /// (today = last 1 day, today + yesterday = last 2 days, …).
+    static func parseCost(from data: Data, lastDays: Int) -> Decimal {
+        guard lastDays > 0,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let entries = json["data"] as? [[String: Any]] else { return 0 }
+
+        let cal    = Calendar.current
+        let today  = cal.startOfDay(for: .now)
+        // cutoff is the start of the earliest day to include
+        guard let cutoff = cal.date(byAdding: .day, value: -(lastDays - 1), to: today) else { return 0 }
+
+        return entries
+            .filter { entry in
+                guard let localDay = localDate(from: entry) else { return false }
+                return cal.startOfDay(for: localDay) >= cutoff
+            }
+            .compactMap { $0["usage"] as? Double }
+            .map { Decimal($0) }
+            .reduce(0, +)
+    }
+
+    /// Kept for test compatibility — sums usage matching the given calendar granularity.
+    static func parseCost(from data: Data, granularity: Calendar.Component) -> Decimal? {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let entries = json["data"] as? [[String: Any]] else { return nil }
 
         let cal = Calendar.current
         let now = Date.now
-
         let total = entries
             .filter { entry in
                 guard let localDay = localDate(from: entry) else { return false }

@@ -36,9 +36,9 @@ final class OllamaLocalService: ProviderService {
             let monthCost = await MainActor.run { HistoryStore.shared.costThisMonth(for: .ollamaLocal) }
             return ProviderSnapshot(
                 provider: .ollamaLocal,
-                costToday: 0,
+                costToday: 0, cost7d: 0, cost30d: 0,
                 costThisMonth: monthCost,
-                balance: nil,
+                balance: nil, allTimeUsage: nil,
                 claudeUtilization: nil,
                 updatedAt: .now,
                 error: .logNotFound
@@ -58,9 +58,9 @@ final class OllamaLocalService: ProviderService {
 
         return ProviderSnapshot(
             provider: .ollamaLocal,
-            costToday: costToday,
+            costToday: costToday, cost7d: 0, cost30d: 0,
             costThisMonth: monthCost,
-            balance: nil,
+            balance: nil, allTimeUsage: nil,
             claudeUtilization: nil,
             updatedAt: .now,
             error: nil

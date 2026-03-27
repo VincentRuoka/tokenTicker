@@ -2,17 +2,18 @@ import SwiftUI
 import Charts
 
 struct ProviderRowView: View {
-    @AppStorage("showOR_total") private var showTotal = true
-    @AppStorage("showOR_30d")   private var show30d   = true
-    @AppStorage("showOR_7d")    private var show7d    = false
-    @AppStorage("showOR_week")  private var showWeek  = false
-    @AppStorage("showOR_month") private var showMonth = false
+    // OpenRouter toggles
+    @AppStorage("showOR_7d")     private var show7d       = true
+    @AppStorage("showOR_30d")    private var show30d      = true
+    @AppStorage("orChartPeriod") private var chartPeriod: Int = 30
+
     let snapshot: ProviderSnapshot
     var isExpanded: Bool = false
 
-    // Claude is always shown expanded (its bars are the primary content)
     private var showExpanded: Bool {
-        isExpanded || (snapshot.provider == .claude && snapshot.claudeUtilization != nil)
+        snapshot.provider == .openRouter ||
+        (snapshot.provider == .claude && snapshot.claudeUtilization != nil) ||
+        isExpanded
     }
 
     var body: some View {
@@ -34,7 +35,8 @@ struct ProviderRowView: View {
 
                 valueView
 
-                if !(snapshot.provider == .claude && snapshot.claudeUtilization != nil) {
+                if snapshot.provider != .openRouter &&
+                   !(snapshot.provider == .claude && snapshot.claudeUtilization != nil) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(.quaternary)
@@ -70,8 +72,25 @@ struct ProviderRowView: View {
             errorView(error)
         } else if let u = snapshot.claudeUtilization {
             utilizationBadge(u)
+        } else if snapshot.provider == .openRouter {
+            openRouterHeaderValue
         } else {
             costView
+        }
+    }
+
+    @ViewBuilder
+    private var openRouterHeaderValue: some View {
+        if let usage = snapshot.allTimeUsage, let balance = snapshot.balance {
+            Text("$\(formatted(usage)) / $\(formatted(balance))")
+                .font(.system(size: 12).monospacedDigit())
+                .foregroundStyle(.secondary)
+        } else if let balance = snapshot.balance {
+            Text("$\(formatted(balance))")
+                .font(.system(size: 12).monospacedDigit())
+                .foregroundStyle(.secondary)
+        } else {
+            EmptyView()
         }
     }
 
@@ -114,8 +133,7 @@ struct ProviderRowView: View {
     }
 
     private var openRouterExpanded: some View {
-        let daysThisMonth = Calendar.current.component(.day, from: .now)
-        let cumulative = cumulativeSpend(for: .openRouter, days: daysThisMonth)
+        let cumulative = cumulativeSpend(for: .openRouter, days: chartPeriod)
 
         return VStack(alignment: .leading, spacing: 10) {
 
@@ -150,7 +168,7 @@ struct ProviderRowView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .day, count: 7)) { _ in
+                    AxisMarks(values: .stride(by: .day, count: chartPeriod > 7 ? 7 : 2)) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
                             .foregroundStyle(Color.primary.opacity(0.08))
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
@@ -174,26 +192,12 @@ struct ProviderRowView: View {
                 .frame(height: 70)
             }
 
-            // ── Detail rows (balance at bottom) ───────────────────────
-            if showTotal {
-                detailRow("Total", value: "$\(formatted(HistoryStore.shared.totalStoredCost(for: .openRouter)))")
+            // ── Metric rows ────────────────────────────────────────────
+            if show7d {
+                detailRow("Last 7 days", value: "$\(formatted(snapshot.cost7d))")
             }
             if show30d {
-                detailRow("Last 30 days", value: "$\(formatted(HistoryStore.shared.cost(for: .openRouter, lastDays: 30)))")
-            }
-            if show7d {
-                detailRow("Last 7 days", value: "$\(formatted(HistoryStore.shared.cost(for: .openRouter, lastDays: 7)))")
-            }
-            if showWeek {
-                detailRow("Current week", value: "$\(formatted(HistoryStore.shared.costCurrentWeek(for: .openRouter)))")
-            }
-            if showMonth {
-                detailRow("Current month", value: "$\(formatted(HistoryStore.shared.costThisMonth(for: .openRouter)))")
-            }
-            if let balance = snapshot.balance {
-                detailRow("Balance",
-                          value: "$\(formatted(balance))",
-                          valueColor: balance < 2 ? .red : .green)
+                detailRow("Last 30 days", value: "$\(formatted(snapshot.cost30d))")
             }
         }
     }
@@ -329,7 +333,7 @@ struct ProviderRowView: View {
         f.numberStyle = .decimal
         f.locale = Locale(identifier: "en_US")
         f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 4
+        f.maximumFractionDigits = 2
         return f
     }()
 }

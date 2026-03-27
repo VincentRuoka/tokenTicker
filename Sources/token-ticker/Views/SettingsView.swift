@@ -52,12 +52,10 @@ private struct ProvidersTab: View {
     @AppStorage("provider.ollamaLocal.enabled") private var ollamaLocalEnabled = false
     @AppStorage("provider.ollamaCloud.enabled") private var ollamaCloudEnabled = false
 
-    // OpenRouter metric visibility
-    @AppStorage("showOR_total") private var showORTotal = true
-    @AppStorage("showOR_30d")   private var showOR30d   = true
-    @AppStorage("showOR_7d")    private var showOR7d    = false
-    @AppStorage("showOR_week")  private var showORWeek  = false
-    @AppStorage("showOR_month") private var showORMonth = false
+    // OpenRouter metric visibility & chart period
+    @AppStorage("showOR_7d")     private var showOR7d       = true
+    @AppStorage("showOR_30d")    private var showOR30d      = true
+    @AppStorage("orChartPeriod") private var orChartPeriod: Int = 30
 
     // OpenRouter
     @State private var openRouterKey   = ""
@@ -109,11 +107,13 @@ private struct ProvidersTab: View {
 
             if openRouterEnabled {
                 Section {
-                    Toggle("Total (all time)", isOn: $showORTotal)
-                    Toggle("Last 30 days",     isOn: $showOR30d)
-                    Toggle("Last 7 days",      isOn: $showOR7d)
-                    Toggle("Current week",     isOn: $showORWeek)
-                    Toggle("Current month",    isOn: $showORMonth)
+                    Picker("Chart period", selection: $orChartPeriod) {
+                        Text("7 days").tag(7)
+                        Text("30 days").tag(30)
+                    }
+                    .pickerStyle(.segmented)
+                    Toggle("Last 7 days",  isOn: $showOR7d)
+                    Toggle("Last 30 days", isOn: $showOR30d)
                 } header: {
                     Label("OpenRouter Metrics", systemImage: "chart.bar")
                 }
@@ -201,12 +201,8 @@ private struct ProvidersTab: View {
 
             // ── Local Ollama ─────────────────────────────────────────────
             Section {
-                providerToggle("Active", isOn: $ollamaLocalEnabled,
-                               key: ProviderID.ollamaLocal.enabledDefaultsKey)
-                if ollamaLocalEnabled {
-                    Text("Auto-detected. Requires Ollama running at localhost:11434.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                LabeledContent("Status") {
+                    Text("Coming in v2").foregroundStyle(.secondary)
                 }
             } header: {
                 Label("Local Ollama", systemImage: "desktopcomputer")
@@ -294,7 +290,7 @@ private struct AdvancedTab: View {
     @AppStorage("pollingIntervalSeconds") private var pollingInterval: Int  = 300
     @AppStorage("ollamaProxyEnabled")     private var proxyEnabled: Bool    = false
     @AppStorage("ollamaProxyPort")        private var proxyPort: Int        = 11435
-    @AppStorage("showSpendInMenubar")     private var showSpendInMenubar: Bool = false
+    @AppStorage("menubarDisplayMode")     private var menubarDisplayMode    = "off"
 
     @State private var showResetConfirm = false
     @State private var proxyPortText    = ""
@@ -347,7 +343,11 @@ private struct AdvancedTab: View {
             }
 
             Section {
-                Toggle("Show spend in menu bar", isOn: $showSpendInMenubar)
+                Picker("Menu bar", selection: $menubarDisplayMode) {
+                    Text("Off").tag("off")
+                    Text("OpenRouter Credit Balance").tag("orBalance")
+                    Text("Claude 5h Session Limit").tag("claude5h")
+                }
             } header: {
                 Label("Display", systemImage: "menubar.rectangle")
             }

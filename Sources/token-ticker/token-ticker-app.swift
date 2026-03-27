@@ -5,7 +5,8 @@ import AppKit
 struct TokenTickerApp: App {
     @State private var appState = AppState()
     @State private var aggregator: AggregatorService?
-    @AppStorage("showSpendInMenubar") private var showSpendInMenubar = false
+    // "off" | "orBalance" | "claude5h"
+    @AppStorage("menubarDisplayMode") private var menubarDisplayMode = "off"
 
     private static let menubarFormatter: NumberFormatter = {
         let f = NumberFormatter()
@@ -16,9 +17,18 @@ struct TokenTickerApp: App {
         return f
     }()
 
-    private var menubarSpendText: String {
-        let formatted = Self.menubarFormatter.string(for: appState.totalCostToday) ?? "0.00"
-        return "$\(formatted)"
+    private var menubarText: String? {
+        switch menubarDisplayMode {
+        case "orBalance":
+            guard let balance = appState.snapshots[.openRouter]?.balance else { return nil }
+            let s = Self.menubarFormatter.string(from: balance as NSDecimalNumber) ?? "0.00"
+            return "$\(s)"
+        case "claude5h":
+            guard let pct = appState.snapshots[.claude]?.claudeUtilization?.fiveHourPct else { return nil }
+            return "\(Int(pct * 100))%"
+        default:
+            return nil
+        }
     }
 
     private var menubarIconName: String {
@@ -66,7 +76,7 @@ struct TokenTickerApp: App {
                     syncProxy()
                 }
         } label: {
-            HStack(spacing: 4) {
+            HStack(alignment: .center, spacing: 4) {
                 if let img = menubarNSImage {
                     Image(nsImage: img)
                         .resizable()
@@ -75,9 +85,10 @@ struct TokenTickerApp: App {
                 } else {
                     Image(systemName: menubarIconName)
                 }
-                if showSpendInMenubar {
-                    Text(menubarSpendText)
+                if let text = menubarText {
+                    Text(text)
                         .font(.system(size: 12, weight: .medium).monospacedDigit())
+                        .frame(height: 18, alignment: .center)
                 }
             }
         }
