@@ -55,6 +55,13 @@ echo "  → Mounted at: $MOUNT_DIR"
 DISK_NAME=$(basename "$MOUNT_DIR")
 echo "  → Volume name: $DISK_NAME"
 
+# Hide dot-files so they don't appear in the DMG window
+chflags hidden "$MOUNT_DIR/.background" 2>/dev/null || true
+if [ -f "Resources/icons/AppIcon.icns" ]; then
+    cp "Resources/icons/AppIcon.icns" "$MOUNT_DIR/.VolumeIcon.icns"
+    chflags hidden "$MOUNT_DIR/.VolumeIcon.icns" 2>/dev/null || true
+fi
+
 # Style the DMG window with AppleScript
 osascript - "$DISK_NAME" "$BUNDLE_NAME" << 'APPLESCRIPT'
 on run argv
@@ -71,8 +78,8 @@ on run argv
             set arrangement of theViewOptions to not arranged
             set icon size of theViewOptions to 100
             set background picture of theViewOptions to file ".background:background.png"
-            set position of item bundleName of container window to {170, 270}
-            set position of item "Applications" of container window to {510, 270}
+            set position of item bundleName of container window to {170, 240}
+            set position of item "Applications" of container window to {510, 240}
             close
             open
             update without registering applications
@@ -82,11 +89,6 @@ on run argv
     end tell
 end run
 APPLESCRIPT
-
-# Set volume icon
-if [ -f "Resources/icons/AppIcon.icns" ]; then
-    cp "Resources/icons/AppIcon.icns" "$MOUNT_DIR/.VolumeIcon.icns"
-fi
 
 # Unmount
 sync

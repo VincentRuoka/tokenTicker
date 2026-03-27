@@ -82,13 +82,15 @@ struct TokenTickerApp: App {
                         .resizable()
                         .interpolation(.high)
                         .frame(width: 18, height: 18)
+                        .offset(y: -1)
                 } else {
                     Image(systemName: menubarIconName)
+                        .offset(y: -1)
                 }
                 if let text = menubarText {
                     Text(text)
                         .font(.system(size: 12, weight: .medium).monospacedDigit())
-                        .frame(height: 18, alignment: .center)
+                        .frame(height: 18)
                 }
             }
         }

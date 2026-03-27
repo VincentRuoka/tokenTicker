@@ -83,9 +83,10 @@ printf "APPL????" > "$APP_PATH/Contents/PkgInfo"
 # Clean extended attributes
 xattr -cr "$APP_PATH"
 
-# Sign — try Developer ID first, fall back to ad-hoc
-DEVELOPER_ID="Developer ID Application:"
-if codesign --force --deep --options runtime --sign "$DEVELOPER_ID" "$APP_PATH" 2>/dev/null; then
+# Sign — use Developer ID if available, otherwise ad-hoc (no keychain prompt)
+DEV_ID=$(security find-identity -p codesigning -v 2>/dev/null | grep "Developer ID Application" | head -1 | awk '{print $2}')
+if [ -n "$DEV_ID" ]; then
+    codesign --force --deep --options runtime --sign "$DEV_ID" "$APP_PATH"
     echo "✅ Signed with Developer ID"
 else
     echo "⚠️  Ad-hoc signature (not notarized)"
